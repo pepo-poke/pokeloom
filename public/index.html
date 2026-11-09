@@ -77,7 +77,9 @@
     async function runTest() {
       const url = endpointInput.value.trim();
       if (!url) { setStatus("overall", "URLを入力してください", "bad"); return; }
-      let requestUrl;\n      try { requestUrl = new URL(url, window.location.origin); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }\n      if (requestUrl.origin !== window.location.origin) { setStatus("overall", "同一オリジンのAPIパスを入力してください", "bad"); return; }
+      let requestUrl;
+      try { requestUrl = new URL(url, window.location.origin); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }
+      if (requestUrl.origin !== window.location.origin) { setStatus("overall", "同一オリジンのAPIパスを入力してください", "bad"); return; }
       fetchButton.disabled = true; copyButton.disabled = true; latestJsonText = "";
       setText("started", new Date().toLocaleString());
       setText("httpStatus", "—"); setText("contentType", "—"); setText("elapsed", "計測中");
