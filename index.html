@@ -1,127 +1,41 @@
 <!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PokéLoom | Battle Data</title>
-  <style>
-    :root { color-scheme: light dark; --border: #8885; --panel: #8881; --ok: #16803c; --bad: #c62828; --warn: #a56800; }
-    * { box-sizing: border-box; }
-    body { max-width: 1000px; margin: 0 auto; padding: 24px 16px; font: 16px/1.55 system-ui, sans-serif; }
-    h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4vw, 2.2rem); }
-    .muted { opacity: .72; }
-    .card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0; }
-    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    button { border: 0; border-radius: 8px; padding: 10px 16px; background: #1769aa; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .6; cursor: wait; }
-    input { flex: 1 1 420px; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
-    .status { font-weight: 650; }
-    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
-    dl { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 8px 14px; }
-    dt { font-weight: 600; } dd { margin: 0; overflow-wrap: anywhere; }
-    pre { max-height: 60vh; overflow: auto; padding: 14px; border-radius: 8px; background: var(--panel); white-space: pre; }
-    .small { font-size: .9rem; }
-    @media (max-width: 520px) { dl { grid-template-columns: 1fr; gap: 2px; } dd { margin-bottom: 10px; } }
-  </style>
-</head>
-<body>
-  <h1>PokéLoom</h1>
-  <p><strong>Battle Data Lab</strong></p>
-  <p class="muted">ポケモン対戦データを探索・分析するためのデータラボです。</p>
-  <section class="card">
-    <label for="endpoint"><strong>API endpoint</strong></label>
-    <div class="row" style="margin-top:8px">
-      <input id="endpoint" type="url" value="https://silph-scope.com/api/ladder?format=double" spellcheck="false">
-      <button id="fetchButton" type="button">取得する</button>
-    </div>
-    <p class="small muted">同一オリジンではないAPIへのアクセスを試します。ブラウザのCORS制限はこのページから回避できません。</p>
-  </section>
-  <section class="card" aria-live="polite">
-    <h2>診断結果</h2>
-    <p id="overall" class="status">未実行</p>
-    <dl>
-      <dt>開始時刻</dt><dd id="started">—</dd>
-      <dt>HTTP status</dt><dd id="httpStatus">—</dd>
-      <dt>Content-Type</dt><dd id="contentType">—</dd>
-      <dt>取得時間</dt><dd id="elapsed">—</dd>
-      <dt>CORS診断</dt><dd id="cors">未実行</dd>
-      <dt>JSON解析</dt><dd id="jsonStatus">未実行</dd>
-      <dt>データサイズ</dt><dd id="size">—</dd>
-    </dl>
-    <p id="error" class="bad" role="alert"></p>
-  </section>
-  <section class="card">
-    <div class="row">
-      <h2 style="margin:0;flex:1">JSON response</h2>
-      <button id="copyButton" type="button" disabled>JSONをコピー</button>
-    </div>
-    <p class="small muted">レスポンス全体を表示します。大きいJSONの場合、表示に時間がかかることがあります。</p>
-    <pre id="jsonOutput">取得結果はここに表示されます。</pre>
-  </section>
-  <script>
-    "use strict";
-    const $ = (id) => document.getElementById(id);
-    const endpointInput = $("endpoint");
-    const fetchButton = $("fetchButton");
-    const copyButton = $("copyButton");
-    let latestJsonText = "";
-    function setText(id, value) { $(id).textContent = value; }
-    function setStatus(id, message, kind = "") {
-      const el = $(id); el.textContent = message; el.className = kind;
-    }
-    function formatBytes(bytes) {
-      if (bytes < 1024) return `${bytes} B`;
-      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
-    }
-    async function runTest() {
-      const url = endpointInput.value.trim();
-      if (!url) { setStatus("overall", "URLを入力してください", "bad"); return; }
-      try { new URL(url); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }
-      fetchButton.disabled = true; copyButton.disabled = true; latestJsonText = "";
-      setText("started", new Date().toLocaleString());
-      setText("httpStatus", "—"); setText("contentType", "—"); setText("elapsed", "計測中");
-      setStatus("cors", "診断中…"); setStatus("jsonStatus", "診断中…"); setText("size", "—");
-      setText("error", ""); setText("jsonOutput", "取得中…"); setStatus("overall", "通信中…", "warn");
-      const start = performance.now();
-      try {
-        const response = await fetch(url, { method: "GET", mode: "cors", cache: "no-store" });
-        const elapsed = performance.now() - start;
-        const contentType = response.headers.get("content-type") || "(不明)";
-        const text = await response.text();
-        setText("httpStatus", `${response.status} ${response.statusText}`);
-        setText("contentType", contentType); setText("elapsed", `${elapsed.toFixed(0)} ms`);
-        setStatus("cors", "成功：ブラウザからレスポンスを読めました", "ok");
-        setText("size", formatBytes(new TextEncoder().encode(text).length));
-        if (!response.ok) { setStatus("overall", `HTTPエラー: ${response.status}`, "bad"); setText("error", `サーバーがHTTP ${response.status}を返しました。`); }
-        try {
-          const data = JSON.parse(text); latestJsonText = JSON.stringify(data, null, 2);
-          setStatus("jsonStatus", "成功：有効なJSONです", "ok"); setText("jsonOutput", latestJsonText);
-          copyButton.disabled = false;
-          if (response.ok) setStatus("overall", "成功：API取得・CORS・JSON解析すべてOK", "ok");
-        } catch (parseError) {
-          latestJsonText = text; setStatus("jsonStatus", "失敗：JSONとして解析できません", "bad");
-          setText("jsonOutput", text || "(レスポンス本文は空です)");
-          setText("error", `JSON解析エラー: ${parseError.message}`);
-          setStatus("overall", "通信は成功しましたが、JSON解析に失敗しました", "bad");
-        }
-      } catch (error) {
-        setText("elapsed", `${(performance.now() - start).toFixed(0)} ms`);
-        setStatus("cors", "失敗：レスポンスをJavaScriptから読めません", "bad");
-        setStatus("jsonStatus", "未実行（レスポンス未取得）");
-        setStatus("overall", "fetch失敗。CORSまたはネットワークの問題が疑われます", "bad");
-        setText("error", `${error.name}: ${error.message}\n` +
-          "考えられる原因：CORS拒否、ネットワーク障害、URL/証明書の問題、ブラウザ拡張による遮断など。\n" +
-          "※ fetchの失敗だけではCORSとネットワーク障害を厳密に区別できません。DevToolsのConsole/Networkも確認してください。");
-        setText("jsonOutput", "レスポンスを取得できませんでした。");
-      } finally { fetchButton.disabled = false; }
-    }
-    fetchButton.addEventListener("click", runTest);
-    copyButton.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(latestJsonText); copyButton.textContent = "コピーしました"; setTimeout(() => { copyButton.textContent = "JSONをコピー"; }, 1500); }
-      catch (error) { setText("error", `コピーに失敗しました: ${error.message}`); }
-    });
-    endpointInput.addEventListener("keydown", (event) => { if (event.key === "Enter") runTest(); });
-  </script>
-</body>
-</html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PokéLoom | Usage Explorer</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151c32;--line:#303b60;--text:#e9efff;--muted:#9eadd2;--accent:#56d8cb;--purple:#9d8cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,sans-serif}header{padding:20px 26px;border-bottom:1px solid var(--line)}h1{margin:0;font-size:25px}header p{margin:3px 0;color:var(--muted)}.tabs{display:flex;gap:8px;padding:12px 16px 0}.tabs button.selected{background:var(--accent);color:#08121d;border-color:var(--accent);font-weight:700}main{display:grid;grid-template-columns:290px minmax(0,1fr);gap:15px;padding:16px;max-width:1600px;margin:auto}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;min-width:0}h2{margin:0 0 10px;font-size:18px}.toolbar{display:flex;gap:8px;flex-wrap:wrap}button{background:#26365e;color:var(--text);border:1px solid #44568a;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.5;cursor:wait}.muted,.status{color:var(--muted)}.status{margin:9px 0}#rankList{max-height:80vh;overflow:auto;margin-top:10px}.rank{display:flex;gap:9px;align-items:center;width:100%;text-align:left;margin:4px 0;background:#11182b;padding:8px}.rank.active{border-color:var(--accent);background:#183044}.rank .num{color:var(--muted);width:24px;text-align:right}.rank .name{font-weight:650}.rank .sub{margin-left:auto;color:var(--muted);font-size:11px}
+#detailTitle{color:var(--accent);font-size:24px}.detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted);margin:2px}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.metric{background:#10172a;border:1px solid var(--line);border-radius:9px;padding:10px}.metric b{display:block;color:var(--accent);font-size:19px}.metric small{color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.statrow{display:grid;grid-template-columns:38px 30px 1fr;gap:7px;align-items:center;font-size:12px}.statrow .bar{height:7px;background:#26304d;border-radius:8px;overflow:hidden}.statrow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:8px}.sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.card{background:#10172a;border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}.card h3{font-size:14px;color:var(--accent);margin:0 0 9px}.wide{grid-column:1/-1}.data-list{display:grid;gap:7px}.entry{display:grid;grid-template-columns:minmax(100px,1fr) 42px;gap:8px;align-items:center}.entry .pct{text-align:right;color:var(--accent);font-variant-numeric:tabular-nums}.track{height:5px;background:#26304d;border-radius:6px;margin-top:4px;overflow:hidden}.track i{display:block;height:100%;background:var(--purple)}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{text-align:left;padding:6px 5px;border-bottom:1px solid #26304d}.table th{color:var(--muted);font-weight:500}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{background:#202b4b;border:1px solid #35466f;border-radius:7px;padding:5px 8px}.chip small{color:var(--accent);margin-left:5px}.raw{margin-top:14px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto;background:#080d1b;padding:12px;border-radius:8px;font-size:12px}
+@media(max-width:850px){main{grid-template-columns:1fr;padding:9px}#rankList{max-height:35vh}.sections{grid-template-columns:1fr}.wide{grid-column:auto}.stats{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>PokéLoom</h1><p>Usage Data Explorer · Pokémon Champions</p></header>
+<nav class="tabs"><button id="tabPokemon">ポケモンランキング</button><button id="tabTrainer">トレーナーランキング</button></nav><main><section class="panel"><h2 id="listHeading">ポケモン使用率一覧</h2><div class="toolbar"><button id="loadRanking">一覧を取得</button><button id="reloadRanking">再取得</button></div><p id="rankStatus" class="status">未取得です。</p><div id="rankList"></div></section>
+<section class="panel"><div class="detail-head"><h2 id="detailTitle">ポケモン詳細</h2><div class="toolbar"><button id="copyJson" disabled>JSONコピー</button><button id="downloadJson" disabled>JSON保存</button></div></div><p id="detailStatus" class="status">一覧からポケモンを選択してください。</p><div id="visual"><p class="muted">ポケモンのデータを取得すると、ここに使用率・技・持ち物・能力・性格・努力値などを表示します。</p></div><details class="raw"><summary>生JSONを表示</summary><pre id="json">未取得</pre></details></section></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);let detailText="",lastPokemon=null,activeButton=null,currentTab=localStorage.getItem("pokeloom-tab")||"pokemon",trainerData=null,pokemonIndexData=null,loadPromises={pokemon:null,trainer:null};
+const API=p=>fetch(p,{headers:{Accept:"application/json"}});
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=v=>Number.isFinite(+v)?(+v).toFixed(+v%1?1:0)+"%":"—";
+function nameOf(o){for(const k of ["name","pokemonName","species","slug","pokemon"]){if(typeof o?.[k]==="string")return o[k];if(o?.[k]&&typeof o[k]==="object")return o[k].name||o[k].en||o[k].ja||""}return ""}
+function idOf(o){for(const k of ["dex","nationalDex","national_dex","dexNo","dexNumber","pokedex","id","number","pokemonId"]){const v=o?.[k];if(Number.isInteger(v)&&v>0&&v<2000)return v}return null}
+function formOf(o){return o?.form??o?.formId??o?.form_id??0}
+function findRows(data){let best=[];function walk(x,d=0){if(d>7||!x||typeof x!=="object")return;if(Array.isArray(x)){let a=x.map(o=>({o,name:nameOf(o),id:idOf(o)})).filter(r=>r.name&&r.id);if(a.length>best.length)best=a;x.slice(0,500).forEach(v=>walk(v,d+1))}else Object.values(x).slice(0,200).forEach(v=>walk(v,d+1))}walk(data);return best}
+function listCard(title,arr,key="name"){if(!Array.isArray(arr)||!arr.length)return "";let max=Math.max(...arr.map(x=>+x.pct||0),1);return '<section class="card"><h3>'+title+'</h3><div class="data-list">'+arr.slice(0,12).map(x=>'<div><div class="entry"><span>'+esc(x[key]??x.name??"—")+'</span><span class="pct">'+pct(x.pct)+'</span></div><div class="track"><i style="width:'+Math.min(100,(+x.pct||0)/max*100)+'%"></i></div></div>').join("")+'</div></section>'}
+function chips(title,arr){if(!arr?.length)return "";return '<section class="card"><h3>'+title+'</h3><div class="chips">'+arr.slice(0,20).map(x=>'<span class="chip">'+esc(x.name)+' <small>#'+esc(x.dex??x.id??"")+'</small></span>').join("")+'</div></section>'}
+function renderPokemon(d){const stats=d.base_stats||[],labels=["HP","攻撃","防御","特攻","特防","素早さ"],sum=stats.reduce((a,b)=>a+(+b||0),0),max=Math.max(...stats,1);
+let html='<div class="summary"><div class="metric"><small>使用率順位</small><b>#'+esc(d.rank??"—")+'</b></div><div class="metric"><small>図鑑番号</small><b>#'+esc(d.dex??lastPokemon.id)+'</b></div><div class="metric"><small>BST</small><b>'+sum+'</b></div><div class="metric"><small>フォーマット</small><b>'+esc(d.format||"—")+'</b></div></div>';
+html+='<div class="chips">'+(d.types||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join("")+'</div>';
+if(stats.length)html+='<section class="card"><h3>種族値</h3><div class="stats">'+stats.map((v,i)=>'<div class="statrow"><span>'+labels[i]+'</span><b>'+v+'</b><div class="bar"><i style="width:'+v/max*100+'%"></i></div></div>').join("")+'</div></section>';
+html+='<div class="sections">'+listCard("技（採用率）",d.moves)+listCard("持ち物",d.items)+listCard("特性",d.abilities)+listCard("性格",d.natures)+listCard("努力値配分",d.evs)+listCard("KO技",d.ko_moves)+listCard("倒された技",d.koed_by_moves)+chips("よく組む味方",d.teammates)+chips("有利な相手",d.beats)+chips("苦手な相手（カウンター）",d.counters)+'</div>';
+$("visual").innerHTML=html}
+async function setTab(tab){currentTab=tab;localStorage.setItem("pokeloom-tab",tab);$("tabPokemon").classList.toggle("selected",tab==="pokemon");$("tabTrainer").classList.toggle("selected",tab==="trainer");$("listHeading").textContent=tab==="pokemon"?"ポケモン使用率一覧":"トレーナーランキング";$("loadRanking").textContent=tab==="pokemon"?"ポケモン一覧を取得":"トレーナーランキングを取得";$("detailTitle").textContent=tab==="pokemon"?"ポケモン詳細":"トレーナー詳細";$("detailStatus").textContent=tab==="pokemon"?"一覧からポケモンを選択してください。":"ランキングからトレーナーを選択してください。";$("visual").innerHTML="";activeButton=null;if(tab==="pokemon"){if(pokemonIndexData)renderPokemonIndex(pokemonIndexData);else await getRanking()}else{if(trainerData)renderTrainerList(trainerData);else await getTrainerRanking()}}
+function trainerName(o){for(const k of ["name","username","trainerName","player","user","displayName","handle"]){let v=o?.[k];if(typeof v==="string"&&v)return v;if(v&&typeof v==="object")return v.name||v.username||v.displayName||""}return ""}
+function trainerRows(data){let best=[];function walk(x,d=0){if(d>6||!x||typeof x!=="object")return;if(Array.isArray(x)){let a=x.filter(o=>trainerName(o));if(a.length>best.length)best=a;x.slice(0,500).forEach(v=>walk(v,d+1))}else Object.values(x).slice(0,200).forEach(v=>walk(v,d+1))}walk(data);return best}
+function renderTrainerList(data){$("rankList").replaceChildren();let rows=trainerRows(data);$("rankStatus").textContent="取得成功："+rows.length+"名候補（trainerデータ）";rows.forEach((o,i)=>{let b=document.createElement("button");b.className="rank";b.innerHTML='<span class="num">'+(o.rank??o.position??i+1)+'</span><span class="name"></span><span class="sub"></span>';b.querySelector(".name").textContent=trainerName(o);b.querySelector(".sub").textContent=o.rating??o.elo??o.score??"";b.onclick=()=>showTrainer(o,i,b);$("rankList").append(b)})}
+function showTrainer(o,i,button){if(activeButton)activeButton.classList.remove("active");activeButton=button;button?.classList.add("active");lastPokemon=null;detailText=JSON.stringify(o,null,2);$("detailTitle").textContent=trainerName(o)||("Trainer "+(i+1));$("detailStatus").textContent="トレーナーランキング項目 · 選択データ";let entries=Object.entries(o).filter(([k,v])=>typeof v!=="object"&&v!==null);$("visual").innerHTML='<div class="summary">'+entries.map(([k,v])=>'<div class="metric"><small>'+esc(k)+'</small><b>'+esc(v)+'</b></div>').join("")+'</div><section class="card"><h3>使用ポケモン等（データ内オブジェクト）</h3><pre>'+esc(JSON.stringify(o,null,2))+'</pre></section>'; $("json").textContent=detailText;$("copyJson").disabled=$("downloadJson").disabled=false}
+async function getTrainerRanking(force=false){if(loadPromises.trainer)return loadPromises.trainer;if(trainerData&&!force){renderTrainerList(trainerData);return}loadPromises.trainer=(async()=>{$("loadRanking").disabled=$("reloadRanking").disabled=true;$("rankStatus").textContent="トレーナーランキング取得中…";try{let r=await API("/api/ladder?format=double"),t=await r.text();if(!r.ok)throw Error("HTTP "+r.status);trainerData=JSON.parse(t);renderTrainerList(trainerData);detailText=JSON.stringify(trainerData,null,2);$("json").textContent=detailText;$("copyJson").disabled=$("downloadJson").disabled=false}catch(e){$("rankStatus").textContent="取得失敗："+e.message}finally{$("loadRanking").disabled=$("reloadRanking").disabled=false;loadPromises.trainer=null}})();return loadPromises.trainer}
+function renderPokemonIndex(data){$("rankList").replaceChildren();let rows=findRows(data);$("rankStatus").textContent="取得成功："+rows.length+"件";rows.forEach((row,i)=>{let b=document.createElement("button");b.className="rank";b.innerHTML='<span class="num">'+(i+1)+'</span><span class="name">'+esc(row.name)+'</span><span class="sub">Dex '+row.id+'</span>';b.onclick=()=>getPokemon(row.id,formOf(row.o),row.name,b);$("rankList").append(b)});$("json").textContent=JSON.stringify(data,null,2);detailText=JSON.stringify(data,null,2);$("copyJson").disabled=$("downloadJson").disabled=false}
+async function getRanking(force=false){if(loadPromises.pokemon)return loadPromises.pokemon;if(pokemonIndexData&&!force){renderPokemonIndex(pokemonIndexData);return}loadPromises.pokemon=(async()=>{$("loadRanking").disabled=$("reloadRanking").disabled=true;$("rankStatus").textContent="dexindex取得中…";$("rankList").replaceChildren();try{let r=await API("/api/dexindex?format=double"),t=await r.text();if(!r.ok)throw Error("HTTP "+r.status);pokemonIndexData=JSON.parse(t);renderPokemonIndex(pokemonIndexData);$("detailTitle").textContent="ポケモン詳細"}catch(e){$("rankStatus").textContent="失敗："+e.message}finally{$("loadRanking").disabled=$("reloadRanking").disabled=false;loadPromises.pokemon=null}})();return loadPromises.pokemon}
+async function getPokemon(id,form,name,button){if(activeButton)activeButton.classList.remove("active");activeButton=button;button?.classList.add("active");lastPokemon={id,form,name};$("detailTitle").textContent="#"+id+" "+name;$("detailStatus").textContent="個別データ取得中…";$("visual").innerHTML="";$("copyJson").disabled=$("downloadJson").disabled=true;try{let r=await API("/api/pokemon/"+id+"?form="+form+"&format=double"),t=await r.text();if(!r.ok)throw Error("HTTP "+r.status);let d=JSON.parse(t);detailText=JSON.stringify(d,null,2);$("json").textContent=detailText;renderPokemon(d);$("detailStatus").textContent="取得成功 · HTTP "+r.status+" · Season "+(d.snapshot?.season??"—")+" · "+(d.snapshot?.tsp?new Date(d.snapshot.tsp*1000).toLocaleString():"");$("copyJson").disabled=$("downloadJson").disabled=false}catch(e){$("detailStatus").textContent="取得失敗："+e.message;$("json").textContent=e.stack||e}}
+$("loadRanking").onclick=()=>currentTab==="pokemon"?getRanking():getTrainerRanking();$("reloadRanking").onclick=()=>currentTab==="pokemon"?getRanking(true):getTrainerRanking(true);$("tabPokemon").onclick=()=>setTab("pokemon");$("tabTrainer").onclick=()=>setTab("trainer");$("copyJson").onclick=async()=>{await navigator.clipboard.writeText(detailText);$("copyJson").textContent="コピー済";setTimeout(()=>$("copyJson").textContent="JSONコピー",1000)};$("downloadJson").onclick=()=>{let u=URL.createObjectURL(new Blob([detailText],{type:"application/json"})),a=document.createElement("a");a.href=u;a.download=(lastPokemon?"pokemon-"+lastPokemon.id:"dexindex")+"-double.json";a.click();URL.revokeObjectURL(u)};
+setTab(currentTab);
+</script></body></html>
