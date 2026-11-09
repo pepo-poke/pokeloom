@@ -77,7 +77,7 @@
     async function runTest() {
       const url = endpointInput.value.trim();
       if (!url) { setStatus("overall", "URLを入力してください", "bad"); return; }
-      try { new URL(url); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }
+      let requestUrl;\n      try { requestUrl = new URL(url, window.location.origin); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }\n      if (requestUrl.origin !== window.location.origin) { setStatus("overall", "同一オリジンのAPIパスを入力してください", "bad"); return; }
       fetchButton.disabled = true; copyButton.disabled = true; latestJsonText = "";
       setText("started", new Date().toLocaleString());
       setText("httpStatus", "—"); setText("contentType", "—"); setText("elapsed", "計測中");
@@ -85,7 +85,7 @@
       setText("error", ""); setText("jsonOutput", "取得中…"); setStatus("overall", "通信中…", "warn");
       const start = performance.now();
       try {
-        const response = await fetch(url, { method: "GET", mode: "same-origin" });
+        const response = await fetch(requestUrl.pathname + requestUrl.search, { method: "GET", mode: "same-origin" });
         const elapsed = performance.now() - start;
         const contentType = response.headers.get("content-type") || "(不明)";
         const text = await response.text();
