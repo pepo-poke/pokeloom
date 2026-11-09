@@ -1,16 +1,127 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PokéLoom | Battle Data</title><style>
-:root{color-scheme:light dark;--b:#8885;--p:#8881;--ok:#16803c;--bad:#c62828;--w:#a56800}*{box-sizing:border-box}body{max-width:950px;margin:auto;padding:24px 16px;font:16px/1.55 system-ui}h1{margin:0;font-size:2.2rem}.muted{opacity:.7}.card{border:1px solid var(--b);border-radius:12px;padding:16px;margin:16px 0}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}button{border:0;border-radius:8px;padding:10px 16px;background:#1769aa;color:white;font:inherit;cursor:pointer}button:disabled{opacity:.6}input{flex:1 1 400px;min-width:0;padding:10px;border:1px solid var(--b);border-radius:8px;font:inherit}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--w)}dl{display:grid;grid-template-columns:160px 1fr;gap:8px}dd{margin:0;overflow-wrap:anywhere}pre{max-height:60vh;overflow:auto;padding:14px;border-radius:8px;background:var(--p);white-space:pre}@media(max-width:500px){dl{grid-template-columns:1fr}}
-</style></head><body><h1>PokéLoom</h1><b>Battle Data Lab</b><p class="muted">ポケモン対戦データを探索・分析するためのデータラボです。</p>
-<section class="card"><label for="url"><b>API endpoint</b></label><div class="row"><input id="url" type="url" value="https://silph-scope.com/api/ladder?format=double"><button id="go">取得する</button></div><p class="muted">ブラウザのCORS制限はこのページから回避できません。</p></section>
-<section class="card" aria-live="polite"><h2>診断結果</h2><p id="overall">未実行</p><dl><dt>開始時刻</dt><dd id="time">—</dd><dt>HTTP status</dt><dd id="status">—</dd><dt>Content-Type</dt><dd id="type">—</dd><dt>取得時間</dt><dd id="elapsed">—</dd><dt>CORS診断</dt><dd id="cors">未実行</dd><dt>JSON解析</dt><dd id="json">未実行</dd><dt>サイズ</dt><dd id="size">—</dd></dl><p id="error" class="bad"></p></section>
-<section class="card"><div class="row"><h2 style="flex:1">JSON response</h2><button id="copy" disabled>JSONをコピー</button></div><pre id="out">取得結果はここに表示されます。</pre></section>
-<script>
-const $=id=>document.getElementById(id);let raw="";
-$("go").onclick=async()=>{let u=$("url").value.trim();try{new URL(u)}catch{$("overall").textContent="URL形式エラー";return}
-$("go").disabled=true;$("copy").disabled=true;$("error").textContent="";$("out").textContent="取得中…";$("time").textContent=new Date().toLocaleString();$("overall").textContent="通信中…";let t=performance.now();
-try{let r=await fetch(u,{mode:"cors",cache:"no-store"});raw=await r.text();$("status").textContent=r.status+" "+r.statusText;$("type").textContent=r.headers.get("content-type")||"不明";$("elapsed").textContent=(performance.now()-t).toFixed(0)+" ms";$("size").textContent=new TextEncoder().encode(raw).length.toLocaleString()+" bytes";$("cors").textContent="成功：レスポンスを読めました";$("cors").className="ok";
-try{let d=JSON.parse(raw);raw=JSON.stringify(d,null,2);$("json").textContent="成功：有効なJSON";$("json").className="ok";$("out").textContent=raw;$("copy").disabled=false;$("overall").textContent=r.ok?"API・CORS・JSONすべてOK":"HTTPエラー "+r.status;$("overall").className=r.ok?"ok":"bad"}catch(e){$("json").textContent="JSON解析失敗";$("json").className="bad";$("out").textContent=raw;$("error").textContent=e.message;$("overall").textContent="通信成功・JSON解析失敗"}
-}catch(e){$("elapsed").textContent=(performance.now()-t).toFixed(0)+" ms";$("cors").textContent="失敗：JSから読めません";$("cors").className="bad";$("json").textContent="未実行";$("overall").textContent="fetch失敗（CORSまたはネットワーク）";$("overall").className="bad";$("error").textContent=e.name+": "+e.message+"。CORSとネットワーク障害はfetchエラーだけでは区別できません。DevTools Console/Networkも確認してください。";$("out").textContent="レスポンス未取得"}finally{$("go").disabled=false}};
-$("copy").onclick=async()=>{try{await navigator.clipboard.writeText(raw);$("copy").textContent="コピーしました";setTimeout(()=>$("copy").textContent="JSONをコピー",1300)}catch(e){$("error").textContent=e.message}};
-$("url").onkeydown=e=>{if(e.key==="Enter")$("go").click()};
-</script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PokéLoom | Battle Data</title>
+  <style>
+    :root { color-scheme: light dark; --border: #8885; --panel: #8881; --ok: #16803c; --bad: #c62828; --warn: #a56800; }
+    * { box-sizing: border-box; }
+    body { max-width: 1000px; margin: 0 auto; padding: 24px 16px; font: 16px/1.55 system-ui, sans-serif; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4vw, 2.2rem); }
+    .muted { opacity: .72; }
+    .card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button { border: 0; border-radius: 8px; padding: 10px 16px; background: #1769aa; color: white; font: inherit; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    input { flex: 1 1 420px; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+    .status { font-weight: 650; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+    dl { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 8px 14px; }
+    dt { font-weight: 600; } dd { margin: 0; overflow-wrap: anywhere; }
+    pre { max-height: 60vh; overflow: auto; padding: 14px; border-radius: 8px; background: var(--panel); white-space: pre; }
+    .small { font-size: .9rem; }
+    @media (max-width: 520px) { dl { grid-template-columns: 1fr; gap: 2px; } dd { margin-bottom: 10px; } }
+  </style>
+</head>
+<body>
+  <h1>PokéLoom</h1>
+  <p><strong>Battle Data Lab</strong></p>
+  <p class="muted">ポケモン対戦データを探索・分析するためのデータラボです。</p>
+  <section class="card">
+    <label for="endpoint"><strong>API endpoint</strong></label>
+    <div class="row" style="margin-top:8px">
+      <input id="endpoint" type="url" value="https://silph-scope.com/api/ladder?format=double" spellcheck="false">
+      <button id="fetchButton" type="button">取得する</button>
+    </div>
+    <p class="small muted">同一オリジンではないAPIへのアクセスを試します。ブラウザのCORS制限はこのページから回避できません。</p>
+  </section>
+  <section class="card" aria-live="polite">
+    <h2>診断結果</h2>
+    <p id="overall" class="status">未実行</p>
+    <dl>
+      <dt>開始時刻</dt><dd id="started">—</dd>
+      <dt>HTTP status</dt><dd id="httpStatus">—</dd>
+      <dt>Content-Type</dt><dd id="contentType">—</dd>
+      <dt>取得時間</dt><dd id="elapsed">—</dd>
+      <dt>CORS診断</dt><dd id="cors">未実行</dd>
+      <dt>JSON解析</dt><dd id="jsonStatus">未実行</dd>
+      <dt>データサイズ</dt><dd id="size">—</dd>
+    </dl>
+    <p id="error" class="bad" role="alert"></p>
+  </section>
+  <section class="card">
+    <div class="row">
+      <h2 style="margin:0;flex:1">JSON response</h2>
+      <button id="copyButton" type="button" disabled>JSONをコピー</button>
+    </div>
+    <p class="small muted">レスポンス全体を表示します。大きいJSONの場合、表示に時間がかかることがあります。</p>
+    <pre id="jsonOutput">取得結果はここに表示されます。</pre>
+  </section>
+  <script>
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    const endpointInput = $("endpoint");
+    const fetchButton = $("fetchButton");
+    const copyButton = $("copyButton");
+    let latestJsonText = "";
+    function setText(id, value) { $(id).textContent = value; }
+    function setStatus(id, message, kind = "") {
+      const el = $(id); el.textContent = message; el.className = kind;
+    }
+    function formatBytes(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+    }
+    async function runTest() {
+      const url = endpointInput.value.trim();
+      if (!url) { setStatus("overall", "URLを入力してください", "bad"); return; }
+      try { new URL(url); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }
+      fetchButton.disabled = true; copyButton.disabled = true; latestJsonText = "";
+      setText("started", new Date().toLocaleString());
+      setText("httpStatus", "—"); setText("contentType", "—"); setText("elapsed", "計測中");
+      setStatus("cors", "診断中…"); setStatus("jsonStatus", "診断中…"); setText("size", "—");
+      setText("error", ""); setText("jsonOutput", "取得中…"); setStatus("overall", "通信中…", "warn");
+      const start = performance.now();
+      try {
+        const response = await fetch(url, { method: "GET", mode: "cors", cache: "no-store" });
+        const elapsed = performance.now() - start;
+        const contentType = response.headers.get("content-type") || "(不明)";
+        const text = await response.text();
+        setText("httpStatus", `${response.status} ${response.statusText}`);
+        setText("contentType", contentType); setText("elapsed", `${elapsed.toFixed(0)} ms`);
+        setStatus("cors", "成功：ブラウザからレスポンスを読めました", "ok");
+        setText("size", formatBytes(new TextEncoder().encode(text).length));
+        if (!response.ok) { setStatus("overall", `HTTPエラー: ${response.status}`, "bad"); setText("error", `サーバーがHTTP ${response.status}を返しました。`); }
+        try {
+          const data = JSON.parse(text); latestJsonText = JSON.stringify(data, null, 2);
+          setStatus("jsonStatus", "成功：有効なJSONです", "ok"); setText("jsonOutput", latestJsonText);
+          copyButton.disabled = false;
+          if (response.ok) setStatus("overall", "成功：API取得・CORS・JSON解析すべてOK", "ok");
+        } catch (parseError) {
+          latestJsonText = text; setStatus("jsonStatus", "失敗：JSONとして解析できません", "bad");
+          setText("jsonOutput", text || "(レスポンス本文は空です)");
+          setText("error", `JSON解析エラー: ${parseError.message}`);
+          setStatus("overall", "通信は成功しましたが、JSON解析に失敗しました", "bad");
+        }
+      } catch (error) {
+        setText("elapsed", `${(performance.now() - start).toFixed(0)} ms`);
+        setStatus("cors", "失敗：レスポンスをJavaScriptから読めません", "bad");
+        setStatus("jsonStatus", "未実行（レスポンス未取得）");
+        setStatus("overall", "fetch失敗。CORSまたはネットワークの問題が疑われます", "bad");
+        setText("error", `${error.name}: ${error.message}\n` +
+          "考えられる原因：CORS拒否、ネットワーク障害、URL/証明書の問題、ブラウザ拡張による遮断など。\n" +
+          "※ fetchの失敗だけではCORSとネットワーク障害を厳密に区別できません。DevToolsのConsole/Networkも確認してください。");
+        setText("jsonOutput", "レスポンスを取得できませんでした。");
+      } finally { fetchButton.disabled = false; }
+    }
+    fetchButton.addEventListener("click", runTest);
+    copyButton.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(latestJsonText); copyButton.textContent = "コピーしました"; setTimeout(() => { copyButton.textContent = "JSONをコピー"; }, 1500); }
+      catch (error) { setText("error", `コピーに失敗しました: ${error.message}`); }
+    });
+    endpointInput.addEventListener("keydown", (event) => { if (event.key === "Enter") runTest(); });
+  </script>
+</body>
+</html>
