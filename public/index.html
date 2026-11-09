@@ -54,6 +54,7 @@
     <div class="row">
       <h2 style="margin:0;flex:1">JSON response</h2>
       <button id="copyButton" type="button" disabled>JSONをコピー</button>
+      <button id="downloadButton" type="button" disabled>JSONをダウンロード</button>
     </div>
     <p class="small muted">レスポンス全体を表示します。大きいJSONの場合、表示に時間がかかることがあります。</p>
     <pre id="jsonOutput">取得結果はここに表示されます。</pre>
@@ -64,6 +65,7 @@
     const endpointInput = $("endpoint");
     const fetchButton = $("fetchButton");
     const copyButton = $("copyButton");
+    const downloadButton = $("downloadButton");
     let latestJsonText = "";
     function setText(id, value) { $(id).textContent = value; }
     function setStatus(id, message, kind = "") {
@@ -80,7 +82,7 @@
       let requestUrl;
       try { requestUrl = new URL(url, window.location.origin); } catch { setStatus("overall", "URLの形式が正しくありません", "bad"); return; }
       if (requestUrl.origin !== window.location.origin) { setStatus("overall", "同一オリジンのAPIパスを入力してください", "bad"); return; }
-      fetchButton.disabled = true; copyButton.disabled = true; latestJsonText = "";
+      fetchButton.disabled = true; copyButton.disabled = true; downloadButton.disabled = true; latestJsonText = "";
       setText("started", new Date().toLocaleString());
       setText("httpStatus", "—"); setText("contentType", "—"); setText("elapsed", "計測中");
       setStatus("cors", "診断中…"); setStatus("jsonStatus", "診断中…"); setText("size", "—");
@@ -99,7 +101,8 @@
         try {
           const data = JSON.parse(text); latestJsonText = JSON.stringify(data, null, 2);
           setStatus("jsonStatus", "成功：有効なJSONです", "ok"); setText("jsonOutput", latestJsonText);
-          copyButton.disabled = false;
+          copyButton.disabled = false; downloadButton.disabled = true; // JSONとして解析できた場合に下で有効化
+          downloadButton.disabled = false;
           if (response.ok) setStatus("overall", "成功：API取得・CORS・JSON解析すべてOK", "ok");
         } catch (parseError) {
           latestJsonText = text; setStatus("jsonStatus", "失敗：JSONとして解析できません", "bad");
@@ -122,6 +125,19 @@
     copyButton.addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(latestJsonText); copyButton.textContent = "コピーしました"; setTimeout(() => { copyButton.textContent = "JSONをコピー"; }, 1500); }
       catch (error) { setText("error", `コピーに失敗しました: ${error.message}`); }
+    });
+    downloadButton.addEventListener("click", () => {
+      if (!latestJsonText) return;
+      const blob = new Blob([latestJsonText], { type: "application/json;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      link.href = objectUrl;
+      link.download = `pokeloom-ladder-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     });
     endpointInput.addEventListener("keydown", (event) => { if (event.key === "Enter") runTest(); });
   </script>
