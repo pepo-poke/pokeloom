@@ -1,10 +1,25 @@
 const CACHE_TTL = 3600;
+const IMAGE_CACHE_TTL = 86400;
 const UPSTREAM = "https://silph-scope.com";
 function jsonError(message,status=400){return new Response(JSON.stringify({error:message}),{status,headers:{"Content-Type":"application/json; charset=utf-8"}});}
 function corsHeaders(origin){return {"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"GET, OPTIONS","Access-Control-Allow-Headers":"Content-Type","Vary":"Origin"};}
 export default {async fetch(request,env,ctx){
  const url=new URL(request.url);
  if(url.pathname==="/health")return new Response("PokéLoom Worker is running");
+ // Silph Scope sprite sheets (allowlist only)
+ if(["/sprites/sheets/poke.webp","/sprites/sheets/mega.webp"].includes(url.pathname)){
+  if(request.method!=="GET"&&request.method!=="HEAD")return new Response("Method not allowed",{status:405});
+  const target=UPSTREAM+url.pathname+url.search,key=new Request(target,{method:"GET"}),cache=caches.default,cached=await cache.match(key);
+  if(cached){const h=new Headers(cached.headers);h.set("Cache-Control","public, max-age="+IMAGE_CACHE_TTL);h.set("X-PokeLoom-Cache","HIT");return new Response(cached.body,{status:cached.status,statusText:cached.statusText,headers:h});}
+  try{
+   const upstream=await fetch(target,{headers:{Accept:"image/webp,image/*"}});
+   const h=new Headers(upstream.headers);h.set("Cache-Control","public, max-age="+IMAGE_CACHE_TTL);h.set("X-PokeLoom-Cache","MISS");
+   if(!upstream.ok)return new Response("Silph Scope image request failed",{status:upstream.status,headers:h});
+   h.set("Content-Type","image/webp");
+   const response=new Response(request.method==="HEAD"?null:upstream.body,{status:upstream.status,headers:h});
+   const copy=response.clone();ctx.waitUntil(cache.put(key,copy));return response;
+  }catch(e){return new Response("Silph Scope image fetch failed",{status:502});}
+ }
  let path=null;
  if(url.pathname==="/api/leaderboard"||url.pathname==="/api/dexindex"){
   const f=url.searchParams.get("format")||"double";
