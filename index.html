@@ -96,6 +96,7 @@ function renderPopulationTrend(d){
   const br=box.getBoundingClientRect();tip.style.left=Math.max(8,Math.min(ev.clientX-br.left+12,box.clientWidth-tip.offsetWidth-8))+"px";
   tip.style.top=Math.max(8,Math.min(ev.clientY-br.top+12,box.clientHeight-tip.offsetHeight-8))+"px";
  });
+ svg.addEventListener("click",ev=>{const rect=svg.getBoundingClientRect(),px=(ev.clientX-rect.left)/rect.width*W,idx=Math.max(0,Math.min(n-1,Math.round((px-L)/iw*(n-1))));let chosen=null,dist=Infinity;series.forEach((arr,k)=>{const a=arr.find(z=>z.i===idx);if(a){const dd=Math.abs(ev.clientY-(rect.top+(y(a.v)/H)*rect.height));if(dd<dist){chosen=a;dist=dd}}});if(chosen){const p=d.players.find(p=>(p.name||p.trainerName||p.username||"不明")===chosen.name);if(p)selectTrajectory(p).catch(e=>$("trajectoryStatus").textContent="トレーナー選択失敗："+e.message)}});
  svg.addEventListener("mouseleave",()=>tip.style.display="none");
  meta.textContent="対象："+d.players.length.toLocaleString()+"人 · 300位/1000位は該当人数が不足する時点で欠損";
 }
