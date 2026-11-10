@@ -83,7 +83,19 @@ function renderPopulationTrend(d){
  const legend=defs.map((d,k)=>'<text x="'+(L+k*270)+'" y="18" fill="'+d.color+'" font-size="13">'+d.name+'</text>').join("");
  box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="全体レーティング推移">'+legend+grid+paths+'<text x="'+L+'" y="'+(H-18)+'" fill="#9eadd2" font-size="12">'+new Date(sn[0]*1000).toLocaleDateString()+'</text><text x="'+(W-R)+'" y="'+(H-18)+'" text-anchor="end" fill="#9eadd2" font-size="12">'+new Date(sn[n-1]*1000).toLocaleDateString()+'</text></svg>';
  let tip=box.querySelector(".chart-tooltip");if(!tip){tip=document.createElement("div");tip.className="chart-tooltip";box.append(tip)}
- box.querySelectorAll(".rating-point").forEach(pt=>{pt.addEventListener("mouseenter",()=>{const a=series[+pt.dataset.k].find(z=>z.i===+pt.dataset.i);tip.style.display="block";tip.textContent=new Date(sn[a.i]*1000).toLocaleDateString()+" · "+a.v+" · "+a.name});pt.addEventListener("mousemove",ev=>{tip.style.left=Math.max(8,Math.min(ev.offsetX+12,box.clientWidth-tip.offsetWidth-8))+"px";tip.style.top=Math.max(8,Math.min(ev.offsetY+12,box.clientHeight-tip.offsetHeight-8))});pt.addEventListener("mouseleave",()=>tip.style.display="none")});
+ const svg=box.querySelector("svg");
+ svg.addEventListener("mousemove",ev=>{
+  const rect=svg.getBoundingClientRect(),px=(ev.clientX-rect.left)/rect.width*W;
+  const idx=Math.max(0,Math.min(n-1,Math.round((px-L)/iw*(n-1))));
+  let best=null,bestDist=Infinity;
+  series.forEach((arr,k)=>{const a=arr.find(z=>z.i===idx);if(!a)return;const dist=Math.abs(ev.clientY-(rect.top+(y(a.v)/H)*rect.height));if(dist<bestDist){best=a;bestDist=dist;best.k=k}});
+  if(!best){tip.style.display="none";return}
+  tip.textContent=new Date(sn[best.i]*1000).toLocaleDateString()+" · "+best.v+" · "+best.name;
+  tip.style.display="block";
+  const br=box.getBoundingClientRect();tip.style.left=Math.max(8,Math.min(ev.clientX-br.left+12,box.clientWidth-tip.offsetWidth-8))+"px";
+  tip.style.top=Math.max(8,Math.min(ev.clientY-br.top+12,box.clientHeight-tip.offsetHeight-8))+"px";
+ });
+ svg.addEventListener("mouseleave",()=>tip.style.display="none");
  meta.textContent="対象："+d.players.length.toLocaleString()+"人 · 300位/1000位は該当人数が不足する時点で欠損";
 }
 function renderTrajectoryMatches(){let q=$("trajectorySearch").value.trim().toLowerCase(),box=$("trajectoryMatches");box.replaceChildren();if(!trajectoryData)return;let all=trajectoryData.players.filter(p=>!q||p.name.toLowerCase().includes(q)),rows=all.slice(0,60);if(!rows.length){box.textContent="該当するトレーナーがいません";return}rows.forEach(p=>{let b=document.createElement("button");b.className="trajectory-match"+(trajectorySelected===p?" active":"");b.textContent=p.name;b.onclick=()=>selectTrajectory(p);box.append(b)});if(all.length>60){let s=document.createElement("span");s.className="muted";s.textContent="候補は先頭60件まで表示（さらに絞り込んでください）";box.append(s)}}
