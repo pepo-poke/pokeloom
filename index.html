@@ -94,7 +94,8 @@ header p {
 }
 
 .trajectory-chart {
-  position:relative width:100%;
+  position:relative;
+  width:100%;
   overflow-x:auto
 }
 
@@ -143,9 +144,7 @@ header p {
 .profile-grid {
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-  gap:8px display:grid;
-  grid-template-columns:minmax(0, 1fr) minmax(0, 2fr);
-  gap:0 16px grid-template-columns:minmax(90px, 1fr) minmax(0, 2fr)
+  gap:8px
 }
 
 .profile-item {
@@ -163,8 +162,8 @@ header p {
 .profile-value {
   font-weight:600;
   white-space:pre-wrap;
-  overflow-wrap:anywhere text-align:right;
   overflow-wrap:anywhere;
+  text-align:right;
   min-width:0;
   color:var(--text);
   font-variant-numeric:tabular-nums
@@ -195,8 +194,7 @@ main {
   gap:15px;
   padding:16px;
   max-width:1600px;
-  margin:auto grid-template-columns:1fr grid-template-columns:1fr;
-  padding:9px
+  margin:auto
 }
 
 .team-panel {
@@ -207,7 +205,8 @@ main {
 .pokemon-list-panel {
   grid-column:1;
   grid-row:2;
-  min-width:0 display:flex;
+  min-width:0;
+  display:flex;
   flex-direction:column;
   min-height:0
 }
@@ -224,11 +223,12 @@ main {
 
 .team-panel .team-cards {
   grid-template-columns:repeat(6, minmax(0, 1fr));
-  gap:8px grid-template-columns:repeat(3, minmax(0, 1fr)) grid-template-columns:repeat(2, minmax(0, 1fr))
+  gap:8px
 }
 
 .team-card {
-  min-height:150px font-size:12px;
+  min-height:150px;
+  font-size:12px;
   padding:8px;
   background:#11182b;
   border:1px solid var(--line);
@@ -237,7 +237,8 @@ main {
 }
 
 .team-card.empty {
-  min-height:110px color:var(--muted)
+  min-height:110px;
+  color:var(--muted)
 }
 
 .team-card header b {
@@ -295,7 +296,7 @@ button:disabled {
   min-height:0;
   max-height:none;
   overflow:auto;
-  margin-top:10px max-height:35vh
+  margin-top:10px
 }
 
 #pokemonSearch {
@@ -498,7 +499,8 @@ button:disabled {
 }
 
 .rank .sub {
-  flex-shrink:0 margin-left:auto;
+  flex-shrink:0;
+  margin-left:auto;
   color:var(--muted);
   font-size:11px
 }
@@ -534,7 +536,7 @@ button:disabled {
   display:grid;
   grid-template-columns:repeat(4, minmax(0, 1fr));
   gap:8px;
-  margin:12px 0 grid-template-columns:repeat(2, minmax(0, 1fr))
+  margin:12px 0
 }
 
 .trainer-summary .metric {
@@ -547,7 +549,7 @@ button:disabled {
 
 .trainer-summary .rating-metric {
   grid-column:span 2;
-  background:linear-gradient(135deg, #182844, #10172a) grid-column:span 2
+  background:linear-gradient(135deg, #182844, #10172a)
 }
 
 .trainer-summary .rating-metric b {
@@ -633,7 +635,7 @@ button:disabled {
   grid-template-columns:repeat(2, minmax(0, 1fr));
   grid-template-rows:repeat(3, auto);
   grid-auto-flow:column;
-  gap:7px grid-template-columns:1fr
+  gap:7px
 }
 
 .statrow {
@@ -662,7 +664,7 @@ button:disabled {
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:12px;
-  margin-top:12px grid-template-columns:1fr
+  margin-top:12px
 }
 
 .card {
@@ -680,7 +682,7 @@ button:disabled {
 }
 
 .wide {
-  grid-column:1/-1 grid-column:auto
+  grid-column:1/-1
 }
 
 .data-list {
@@ -779,6 +781,24 @@ pre {
 .team-panel,.pokemon-list-panel,.detail-panel {
   grid-column:1;
   grid-row:auto
+}
+
+
+@media(max-width:1100px) {
+  main { grid-template-columns:1fr }
+  .team-panel,.pokemon-list-panel,.detail-panel { grid-column:1; grid-row:auto }
+  .team-panel .team-cards { grid-template-columns:repeat(3,minmax(0,1fr)) }
+}
+@media(max-width:600px) {
+  .team-panel .team-cards { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .summary { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .trainer-summary .rating-metric { grid-column:span 2 }
+  .profile-grid { grid-template-columns:minmax(90px,1fr) minmax(0,2fr) }
+  main { grid-template-columns:1fr; padding:9px }
+  #rankList { max-height:35vh }
+  .sections { grid-template-columns:1fr }
+  .wide { grid-column:auto }
+  .stats { grid-template-columns:1fr }
 }
 </style></head><body>
 <header><h1>PokéLoom</h1><p>Usage Data Explorer · Pokémon Champions</p></header>
