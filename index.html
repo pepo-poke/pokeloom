@@ -840,7 +840,46 @@ $("loadRanking").onclick=()=>currentTab==="pokemon"?getRanking():getTrainerRanki
 let trajectoryData=null,trajectorySelected=null;
 function dayLabel(ts){return new Date(ts*1000).toLocaleDateString("ja-JP",{month:"numeric",day:"numeric"})}
 function profileValue(v){if(v===null)return "null";if(Array.isArray(v))return "配列 · "+v.length+"件";if(typeof v==="object")return JSON.stringify(v,null,2);return String(v)}
-async function loadTrainerProfile(p){const box=$("trainerProfile");box.textContent="プロフィール取得中…";try{let id=p.uuid||p.id||p.trainerId||p.playerId;if(!id){if(!trainerData){let rr=await fetch("/api/ladder?format=double"),tt=await rr.text();if(!rr.ok)throw Error("ランキング取得 HTTP "+rr.status);trainerData=JSON.parse(tt)}const match=trainerRows(trainerData).find(o=>trainerName(o)=== (p.name||p.trainerName||p.username));id=match&&(match.uuid||match.id||match.trainerId||match.playerId)}if(!id)throw Error("ランキングJSONからトレーナーIDを特定できません（名前："+(p.name||p.trainerName||"不明")+"）");const r=await fetch("/api/trainer/"+encodeURIComponent(id)+"?format=auto"),txt=await r.text();if(!r.ok)throw Error("HTTP "+r.status+" "+txt.slice(0,300));const d=JSON.parse(txt),obj=d.trainer||d.profile||d;box.replaceChildren();let title=document.createElement("h3");title.textContent="トレーナープロフィール";box.append(title);let grid=document.createElement("div");grid.className="profile-grid";Object.entries(obj).forEach(([k,v])=>{let item=document.createElement("div");item.className="profile-item";let key=document.createElement("div");key.className="profile-key";key.textContent=k;let val=document.createElement("div");val.className="profile-value";val.textContent=profileValue(v);item.append(key,val);grid.append(item)});box.append(grid);let raw=document.createElement("details"),sum=document.createElement("summary");sum.textContent="JSON全体を表示";let pre=document.createElement("pre");pre.textContent=JSON.stringify(d,null,2);raw.append(sum,pre);box.append(raw)}catch(e){box.textContent="プロフィール取得失敗："+e.message}}
+async function loadTrainerProfile(p){
+ const box=$("trainerProfile");box.textContent="プロフィール取得中…";
+ try{
+  let id=p.uuid||p.id||p.trainerId||p.playerId;
+  if(!id){
+   if(!trainerData){const rr=await fetch("/api/ladder?format=double"),tt=await rr.text();if(!rr.ok)throw Error("ランキング取得 HTTP "+rr.status);trainerData=JSON.parse(tt)}
+   const match=trainerRows(trainerData).find(o=>trainerName(o)===(p.name||p.trainerName||p.username));id=match&&(match.uuid||match.id||match.trainerId||match.playerId)
+  }
+  if(!id)throw Error("ランキングJSONからトレーナーIDを特定できません");
+  const r=await fetch("/api/trainer/"+encodeURIComponent(id)+"?format=auto"),txt=await r.text();
+  if(!r.ok)throw Error("HTTP "+r.status+" "+txt.slice(0,300));
+  const d=JSON.parse(txt),o=d.trainer||d.profile||d;
+  box.replaceChildren();
+  const heading=document.createElement("h3");heading.textContent="トレーナープロフィール";box.append(heading);
+  const name=document.createElement("div");name.className="trainer-profile-name";name.textContent=o.name||trainerName(p)||"トレーナー";box.append(name);
+  const makeSection=(title,items)=>{
+   const section=document.createElement("section");section.className="trainer-profile-section";
+   const h=document.createElement("h4");h.textContent=title;section.append(h);
+   const grid=document.createElement("div");grid.className="profile-grid";
+   items.filter(x=>x[1]!==undefined&&x[1]!==null&&x[1]!=="").forEach(([label,value])=>{
+    const item=document.createElement("div");item.className="profile-item";
+    const key=document.createElement("div");key.className="profile-key";key.textContent=label;
+    const val=document.createElement("div");val.className="profile-value";val.textContent=String(value);
+    item.append(key,val);grid.append(item)
+   });section.append(grid);box.append(section)
+  };
+  const latest=Array.isArray(o.series)?o.series[o.series.length-1]:null;
+  const countryNames={};
+  makeSection("基本情報",[["国・地域",o.country],["言語",o.lang],["アイコン番号",o.icon],["形式",o.format||o.season_fmt],["シーズン",o.season]]);
+  const s=o.standing||{};
+  makeSection("現在のランキング",[["総合順位",s.rank],["国内順位",s.country_rank],["参加人数",s.total],["国内参加人数",s.country_total]]);
+  if(latest)makeSection("直近のシーズン成績",[["Rating",latest.rating],["順位",latest.rank],["勝利",latest.wins],["敗北",latest.losses],["引き分け",latest.draws],["勝率",latest.wr==null?null:(Number(latest.wr)*100).toFixed(1)+"%"]]);
+  if(Array.isArray(o.series)&&o.series.length){
+   const section=document.createElement("section");section.className="trainer-profile-section";const h=document.createElement("h4");h.textContent="シーズン成績";section.append(h);
+   const table=document.createElement("table");table.className="trainer-season-table";table.innerHTML="<thead><tr><th>シーズン</th><th>順位</th><th>Rating</th><th>勝</th><th>敗</th><th>分</th></tr></thead>";
+   const body=document.createElement("tbody");o.series.slice().reverse().forEach((v,i)=>{const tr=document.createElement("tr");[v.season??(o.seasons?.[o.seasons.length-1-i]??"—"),v.rank,v.rating,v.wins,v.losses,v.draws].forEach(x=>{const td=document.createElement("td");td.textContent=x==null?"—":String(x);tr.append(td)});body.append(tr)});table.append(body);section.append(table);box.append(section)
+  }
+  const raw=document.createElement("details"),sum=document.createElement("summary");sum.textContent="APIデータ（JSON）";const pre=document.createElement("pre");pre.textContent=JSON.stringify(d,null,2);raw.append(sum,pre);box.append(raw)
+ }catch(e){box.textContent="プロフィール取得失敗："+e.message}
+}
 async function renderRankingTrainerChart(o,id){
  const box=$("rankTrainerChart"),meta=$("rankTrainerChartMeta");
  try{
