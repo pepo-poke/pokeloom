@@ -787,7 +787,8 @@ pre {
 </main>
 <script>
 "use strict";
-const $=id=>document.getElementById(id);let detailText="",lastPokemon=null,lastTrainer=null,activeButton=null,dexIndexCache=null,currentStatsSelection="base",currentTab=localStorage.getItem("pokeloom-tab")||"pokemon",trainerData=null,pokemonIndexData=null,loadPromises={pokemon:null,trainer:null},pokemonRows=[],teamPick=[null,null,null,null,null,null],activeTeamSlot=0;
+const $=id=>document.getElementById(id);
+let detailText="",lastPokemon=null,lastTrainer=null,activeButton=null,dexIndexCache=null,currentStatsSelection="base",currentTab=localStorage.getItem("pokeloom-tab")||"pokemon",trainerData=null,pokemonIndexData=null,loadPromises={pokemon:null,trainer:null},pokemonRows=[],teamPick=[null,null,null,null,null,null],activeTeamSlot=0;
 const API=p=>fetch(p,{headers:{Accept:"application/json"}});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pct=v=>Number.isFinite(+v)?(+v).toFixed(+v%1?1:0)+"%":"—";
