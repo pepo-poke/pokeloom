@@ -839,7 +839,6 @@ async function getPokemon(id,form,name,button){lastTrainer=null;currentStatsSele
 $("loadRanking").onclick=()=>currentTab==="pokemon"?getRanking():getTrainerRanking();$("reloadRanking").onclick=()=>currentTab==="pokemon"?getRanking(true):getTrainerRanking(true);$("tabPokemon").onclick=()=>setTab("pokemon");$("tabTrainer").onclick=()=>setTab("trainer");$("copyJson").onclick=async()=>{await navigator.clipboard.writeText(detailText);$("copyJson").textContent="コピー済";setTimeout(()=>$("copyJson").textContent="JSONコピー",1000)};$("downloadJson").onclick=()=>{let u=URL.createObjectURL(new Blob([detailText],{type:"application/json"})),a=document.createElement("a");a.href=u;let safeName=String(lastTrainer?.name||lastTrainer?.username||lastTrainer?.id||"trainer").replace(/[^\w.-]+/g,"_");a.download=currentTab==="trainer"?"trainer-"+safeName+"-double.json":(lastPokemon?"pokemon-"+lastPokemon.id:"dexindex")+"-double.json";a.click();URL.revokeObjectURL(u)};
 let trajectoryData=null,trajectorySelected=null;
 function dayLabel(ts){return new Date(ts*1000).toLocaleDateString("ja-JP",{month:"numeric",day:"numeric"})}
-function profileValue(v){if(v===null)return "null";if(Array.isArray(v))return "配列 · "+v.length+"件";if(typeof v==="object")return JSON.stringify(v,null,2);return String(v)}
 async function loadTrainerProfile(p){
  const box=$("trainerProfile");box.textContent="プロフィール取得中…";
  try{
