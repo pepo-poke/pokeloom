@@ -844,11 +844,11 @@ async function loadTrainerProfile(p){
  try{
   let id=p.uuid||p.id||p.trainerId||p.playerId;
   if(!id){
-   if(!trainerData){const rr=await fetch("/api/ladder?format=double"),tt=await rr.text();if(!rr.ok)throw Error("ランキング取得 HTTP "+rr.status);trainerData=JSON.parse(tt)}
+   if(!trainerData){const rr=await API("/api/ladder?format=double"),tt=await rr.text();if(!rr.ok)throw Error("ランキング取得 HTTP "+rr.status);trainerData=JSON.parse(tt)}
    const match=trainerRows(trainerData).find(o=>trainerName(o)===(p.name||p.trainerName||p.username));id=match&&(match.uuid||match.id||match.trainerId||match.playerId)
   }
   if(!id)throw Error("ランキングJSONからトレーナーIDを特定できません");
-  const r=await fetch("/api/trainer/"+encodeURIComponent(id)+"?format=auto"),txt=await r.text();
+  const r=await API("/api/trainer/"+encodeURIComponent(id)+"?format=auto"),txt=await r.text();
   if(!r.ok)throw Error("HTTP "+r.status+" "+txt.slice(0,300));
   const d=JSON.parse(txt),o=d.trainer||d.profile||d;
   box.replaceChildren();
