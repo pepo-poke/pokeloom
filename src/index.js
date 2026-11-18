@@ -21,30 +21,32 @@ export default {async fetch(request,env,ctx){
   }catch(e){return new Response("Silph Scope image fetch failed",{status:502});}
  }
  let path=null;
+ const format=url.searchParams.get("format")||"double";
+ if(!["single","singles","double"].includes(format))return jsonError("Invalid format");
+ const normalizedFormat=format==="singles"?"single":format;
+ const seasonParam=url.searchParams.get("season"),competition=url.searchParams.get("competition");
+ if(seasonParam!==null&&(!/^\d+$/.test(seasonParam)||competition!==null))return jsonError("Invalid season or competition");
+ if(competition!==null&&!/^ic[a-z0-9]+$/i.test(competition))return jsonError("Invalid competition");
+ const contextQuery=()=> "format="+normalizedFormat+(seasonParam!==null?"&season="+seasonParam:competition!==null?"&competition="+encodeURIComponent(competition):"");
  if(url.pathname==="/api/meta"){
   path="/api/meta";
  }else if(url.pathname==="/api/leaderboard"||url.pathname==="/api/dexindex"){
-  const f=url.searchParams.get("format")||"double";
-  if(!["double","singles"].includes(f))return jsonError("Invalid format");
-  path=url.pathname+"?format="+f;
+  path=url.pathname+"?"+contextQuery();
  }else if(url.pathname==="/api/items"||url.pathname==="/api/moves"){
   path=url.pathname;
  }else if(/^\/api\/pokemon\/\d+$/.test(url.pathname)){
-  const form=url.searchParams.get("form")||"0",f=url.searchParams.get("format")||"double";
-  if(!/^\d+$/.test(form)||!["double","singles"].includes(f))return jsonError("Invalid form or format");
-  path=url.pathname+"?form="+form+"&format="+f;
+  const form=url.searchParams.get("form")||"0";
+  if(!/^\d+$/.test(form))return jsonError("Invalid form");
+  path=url.pathname+"?form="+form+"&"+contextQuery();
  }else if(/^\/api\/trainer\/[0-9a-f-]{36}$/i.test(url.pathname)){
   const id=url.pathname.split("/").pop(),f=url.searchParams.get("format")||"auto";
-  if(!["auto","double","singles"].includes(f))return jsonError("Invalid format");
-  path="/api/trainer/"+id+"?format="+f;
+  if(f!=="auto"&&!["single","singles","double"].includes(f))return jsonError("Invalid format");
+  path="/api/trainer/"+id+"?"+(f==="auto"?"format=auto":contextQuery());
  }else if(["/api/ladder","/api/ladder-trajectories","/api/ladder-series","/api/player-movers"].includes(url.pathname)){
-  const f=url.searchParams.get("format")||"double";
-  if(!["double","singles"].includes(f))return jsonError("Invalid format");
   if(url.pathname==="/api/ladder-trajectories"||url.pathname==="/api/ladder-series"){
-   const season=url.searchParams.get("season")||"8";
-   if(!/^\d+$/.test(season))return jsonError("Invalid season");
-   path=url.pathname+"?format="+f+"&season="+season;
-  }else path=url.pathname+"?format="+f;
+   if(competition!==null)return jsonError("Competition context is not supported for trajectory endpoints");
+   path=url.pathname+"?format="+normalizedFormat+"&season="+(seasonParam??"8");
+  }else path=url.pathname+"?"+contextQuery();
  }
  if(!path)return env.ASSETS.fetch(request);
  if(request.method!=="GET"&&request.method!=="OPTIONS")return new Response("Method not allowed",{status:405});
