@@ -21,7 +21,9 @@ export default {async fetch(request,env,ctx){
   }catch(e){return new Response("Silph Scope image fetch failed",{status:502});}
  }
  let path=null;
- if(url.pathname==="/api/leaderboard"||url.pathname==="/api/dexindex"){
+ if(url.pathname==="/api/meta"){
+  path="/api/meta";
+ }else if(url.pathname==="/api/leaderboard"||url.pathname==="/api/dexindex"){
   const f=url.searchParams.get("format")||"double";
   if(!["double","singles"].includes(f))return jsonError("Invalid format");
   path=url.pathname+"?format="+f;
